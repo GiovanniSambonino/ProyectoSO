@@ -62,6 +62,7 @@ typedef struct BMP_Image {
     Pixel ** pixels;
 } BMP_Image;
 
+void applyDesenfoque(BMP_Image* image);
 void printError(int error);
 BMP_Image* createBMPImage(FILE* fptr);
 BMP_Image* createBMPImageCopy(const BMP_Image* template);
@@ -72,6 +73,7 @@ void freeImage(BMP_Image* image);
 int checkBMPValid(BMP_Header* header);
 void printBMPHeader(BMP_Header* header);
 void printBMPImage(BMP_Image* image);
+
 
 #pragma pack()
 

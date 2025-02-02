@@ -2,6 +2,52 @@
 #include <stdio.h>
 
 #include "bmp.h"
+
+void applyDesenfoque(BMP_Image* image) {
+    int width = image->header.width_px;
+    int height = image->norm_height;
+    int halfHeight = height / 2;
+    int blurRadio = 1;
+    // Crear una copia de la imagen para aplicar el desenfoque
+    BMP_Image* img_desenfocado = createBMPImageCopy(image);
+    if (img_desenfocado == NULL) {
+        return;
+    }
+    // Aplicar el desenfoque solo en la mitad superior
+    for (int i = 0; i < halfHeight; i++) {  // Solo procesar filas en la mitad superior
+        for (int j = 0; j < width; j++) {
+            int sumBlue = 0, sumGreen = 0, sumRed = 0;
+            int count = 0;
+            // Promediar los píxeles dentro del radio de desenfoque
+            for (int desi = -blurRadio; desi <= blurRadio; desi++) {
+                for (int desj = -blurRadio; desj <= blurRadio; desj++) {
+                    int ni = i + desi;
+                    int nj = j + desj;
+                    if (ni >= 0 && ni < halfHeight && nj >= 0 && nj < width) {  // Limitar a la mitad superior
+                        sumBlue += image->pixels[ni][nj].blue;
+                        sumGreen += image->pixels[ni][nj].green;
+                        sumRed += image->pixels[ni][nj].red;
+                        count++;
+                    }
+                }
+            }
+            // Asignar los valores promediados al píxel actual en la imagen desenfocada
+            img_desenfocado->pixels[i][j].blue = sumBlue / count;
+            img_desenfocado->pixels[i][j].green = sumGreen / count;
+            img_desenfocado->pixels[i][j].red = sumRed / count;
+        }
+    }
+    // Solo copiar la mitad superior desenfocada de vuelta a la imagen original
+    for (int i = 0; i < halfHeight; i++) {
+        for (int j = 0; j < width; j++) {
+            image->pixels[i][j] = img_desenfocado->pixels[i][j];
+        }
+    }
+    // Liberar la memoria de la imagen desenfocada
+    freeImage(img_desenfocado);
+}
+
+
 /* USE THIS FUNCTION TO PRINT ERROR MESSAGES
    DO NOT MODIFY THIS FUNCTION
 */
@@ -26,13 +72,15 @@ void printError(int error)
   }
 }
 
+
+
 /* The input argument is the source file pointer. The function will first construct a BMP_Image image by allocating memory to it.
  * Then the function read the header from source image to the image's header.
  * Compute data size, width, height, and bytes_per_pixel of the image and stores them as image's attributes.
  * Finally, allocate menory for image's data according to the image size.
  * Return image;
  */
-BMP_Image *createBMPImage(FILE *fptr)
+BMP_Image* createBMPImage(FILE *fptr)
 {
   printf("Creando imagen\n");
   BMP_Image *image = (BMP_Image *)malloc(sizeof(BMP_Image));

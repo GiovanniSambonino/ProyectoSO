@@ -7,7 +7,6 @@ int main(int argc, char **argv) {
     FILE* source;
     FILE* dest;
     BMP_Image* image = NULL;
-    BMP_Image* ImageChanged = NULL;
 
     if (argc != 3) {
         printError(ARGUMENT_ERROR);
@@ -34,22 +33,14 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    ImageChanged = createBMPImageCopy(image);
-    if (ImageChanged == NULL) {
-        printError(MEMORY_ERROR);
-        freeImage(image);
-        fclose(source);
-        fclose(dest);
-        exit(EXIT_FAILURE);
-    }
 
-    apply(image, ImageChanged);
+    applyDesenfoque(image);
 
   
-    writeImage(argv[2], ImageChanged);
+    writeImage(argv[2], image);
 
     freeImage(image);
-    freeImage(ImageChanged);
+    freeImage(image);
     fclose(source);
     fclose(dest);
 
