@@ -4,9 +4,11 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+#include <string.h>
 #include <unistd.h>
 #include "bmp.h"
 #include "filter.h"
+#include "filter.c"
 
 #define SHM_NAME "/bmp_shared"
 #define SEM_NAME "/bmp_semaphore"
@@ -29,7 +31,7 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    BMP_Image *imageOut = clone_bmp(shm_ptr);
+    BMP_Image *imageOut = createBMPImageCopy(shm_ptr);
     int edgeFilter[3][3] = {{-1, -1, -1}, {-1, 8, -1}, {-1, -1, -1}};
     int numThreads = 4;
     applyParallel(shm_ptr, imageOut, edgeFilter, numThreads);
@@ -42,7 +44,7 @@ int main() {
     close(shm_fd);
     sem_post(sem);
     sem_close(sem);
-    free_bmp(imageOut);
+    free(imageOut);
 
     return EXIT_SUCCESS;
 }

@@ -238,7 +238,7 @@ void readImage(FILE *srcFile, BMP_Image **dataImage)
 /* The input arguments are the destination file name, and BMP_Image pointer.
  * The function write the header and image data into the destination file.
  */
-void writeImage(char *destFileName, BMP_Image *dataImage)
+void writeImage(const char *destFileName, BMP_Image *dataImage)
 {
 
   FILE *destFile = fopen(destFileName, "wb");

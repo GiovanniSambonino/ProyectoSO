@@ -67,7 +67,7 @@ BMP_Image* createBMPImage(FILE* fptr);
 BMP_Image* createBMPImageCopy(const BMP_Image* template);
 void readImageData(FILE *srcFile, BMP_Image *dataImage, int dataSize);
 void readImage(FILE *srcFile, BMP_Image **dataImage);
-void writeImage(char* destFileName, BMP_Image* dataImage);
+void writeImage(const char* destFileName, BMP_Image* dataImage);
 void freeImage(BMP_Image* image);
 int checkBMPValid(BMP_Header* header);
 void printBMPHeader(BMP_Header* header);
