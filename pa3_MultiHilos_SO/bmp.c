@@ -1,29 +1,29 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #include "bmp.h"
 
-void applyDesenfoque(BMP_Image* image) {
-    int width = image->header.width_px;
-    int height = image->norm_height;
-    int halfHeight = height / 2;
-    int blurRadio = 1;
-    // Crear una copia de la imagen para aplicar el desenfoque
-    BMP_Image* img_desenfocado = createBMPImageCopy(image);
-    if (img_desenfocado == NULL) {
-        return;
-    }
-    // Aplicar el desenfoque solo en la mitad superior
-    for (int i = 0; i < halfHeight; i++) {  // Solo procesar filas en la mitad superior
+pthread_mutex_t imageMutex = PTHREAD_MUTEX_INITIALIZER;
+
+void *applyDesenfoqueThread(void *arg) {
+    ThreadData *data = (ThreadData *)arg;
+    BMP_Image *image = data->image;
+    int startRow = data->startRow;
+    int endRow = data->endRow;
+    int width = data->width;
+    int blurRadius = data->blurRadius;
+
+    for (int i = startRow; i < endRow; i++) {  
         for (int j = 0; j < width; j++) {
             int sumBlue = 0, sumGreen = 0, sumRed = 0;
             int count = 0;
             // Promediar los píxeles dentro del radio de desenfoque
-            for (int desi = -blurRadio; desi <= blurRadio; desi++) {
-                for (int desj = -blurRadio; desj <= blurRadio; desj++) {
+            for (int desi = -blurRadius; desi <= blurRadius; desi++) {
+                for (int desj = -blurRadius; desj <= blurRadius; desj++) {
                     int ni = i + desi;
                     int nj = j + desj;
-                    if (ni >= 0 && ni < halfHeight && nj >= 0 && nj < width) {  // Limitar a la mitad superior
+                    if (ni >= 0 && ni < (image->norm_height / 2) && nj >= 0 && nj < width) {  // Limitar a la mitad superior
                         sumBlue += image->pixels[ni][nj].blue;
                         sumGreen += image->pixels[ni][nj].green;
                         sumRed += image->pixels[ni][nj].red;
@@ -31,20 +31,56 @@ void applyDesenfoque(BMP_Image* image) {
                     }
                 }
             }
-            // Asignar los valores promediados al píxel actual en la imagen desenfocada
-            img_desenfocado->pixels[i][j].blue = sumBlue / count;
-            img_desenfocado->pixels[i][j].green = sumGreen / count;
-            img_desenfocado->pixels[i][j].red = sumRed / count;
+
+            // Usar el mutex para asegurarse de que solo un hilo acceda a la imagen a la vez
+            pthread_mutex_lock(&imageMutex);
+
+            // Asignar los valores promediados al píxel actual en la imagen original
+            image->pixels[i][j].blue = sumBlue / count;
+            image->pixels[i][j].green = sumGreen / count;
+            image->pixels[i][j].red = sumRed / count;
+
+            pthread_mutex_unlock(&imageMutex);  // Liberar el mutex
         }
     }
-    // Solo copiar la mitad superior desenfocada de vuelta a la imagen original
-    for (int i = 0; i < halfHeight; i++) {
-        for (int j = 0; j < width; j++) {
-            image->pixels[i][j] = img_desenfocado->pixels[i][j];
+
+    pthread_exit(NULL);
+}
+
+
+void applyDesenfoque(BMP_Image *image, int numThreads) {
+    int height = image->norm_height;
+    int width = image->header.width_px;
+    int halfHeight = height / 2;
+    int blurRadius = 1;  // o lo que se desee
+    pthread_t *threads = malloc(numThreads * sizeof(pthread_t));
+    ThreadData *threadData = malloc(numThreads * sizeof(ThreadData));
+
+    // Calcular la cantidad de filas que cada hilo debe procesar
+    int rowsPerThread = halfHeight / numThreads;
+
+    // Crear hilos y asignarles trabajo
+    for (int i = 0; i < numThreads; i++) {
+        threadData[i].image = image;
+        threadData[i].startRow = i * rowsPerThread;
+        threadData[i].endRow = (i == numThreads - 1) ? halfHeight : (i + 1) * rowsPerThread;
+        threadData[i].width = width;
+        threadData[i].blurRadius = blurRadius;
+
+        if (pthread_create(&threads[i], NULL, applyDesenfoqueThread, (void *)&threadData[i]) != 0) {
+            printError(MEMORY_ERROR);
+            exit(EXIT_FAILURE);
         }
     }
-    // Liberar la memoria de la imagen desenfocada
-    freeImage(img_desenfocado);
+
+    // Esperar a que todos los hilos terminen
+    for (int i = 0; i < numThreads; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    // Liberar los recursos de los hilos
+    free(threads);
+    free(threadData);
 }
 
 
