@@ -14,36 +14,38 @@
 #define SEM_NAME "/bmp_semaphore"
 
 int main() {
-    sem_t *sem = sem_open(SEM_NAME, 0);
-    sem_wait(sem);
+    sem_t *semaforo = sem_open(SEM_NAME, 0);
+    sem_wait(semaforo);
 
-    int shm_fd = shm_open(SHM_NAME, O_RDWR, 0666);
-    if (shm_fd == -1) {
+    int memocom = shm_open(SHM_NAME, O_RDWR, 0666);
+    if (memocom == -1) {
         perror("shm_open");
         return EXIT_FAILURE;
     }
 
-    struct stat shm_stat;
-    fstat(shm_fd, &shm_stat);
-    BMP_Image *shm_ptr = mmap(0, shm_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-    if (shm_ptr == MAP_FAILED) {
+    struct stat memocom_stat;
+    fstat(memocom, &memocom_stat);
+    BMP_Image *memocom_ptr = mmap(0, memocom_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, memocom, 0);
+    if (memocom_ptr == MAP_FAILED) {
         perror("mmap");
         return EXIT_FAILURE;
     }
 
-    BMP_Image *imageOut = createBMPImageCopy(shm_ptr);
-    int edgeFilter[3][3] = {{-1, -1, -1}, {-1, 8, -1}, {-1, -1, -1}};
+    BMP_Image *imageOut = createBMPImageCopy(memocom_ptr);
+    int edgeFilter[3][3] = {{-1, -1, -1}, 
+                            {-1, 8, -1}, 
+                            {-1, -1, -1}};
     int numThreads = 4;
-    applyParallel(shm_ptr, imageOut, edgeFilter, numThreads);
+    applyParallel(memocom_ptr, imageOut, edgeFilter, numThreads);
 
-    memcpy(shm_ptr, imageOut, shm_stat.st_size);
+    memcpy(memocom_ptr, imageOut, memocom_stat.st_size);
 
-    printf("Realce de bordes aplicado a la segunda mitad de la imagen.\n");
+    printf("Aplicado a la segunda mitad de la imagen un realce de bordes\n");
 
-    munmap(shm_ptr, shm_stat.st_size);
-    close(shm_fd);
-    sem_post(sem);
-    sem_close(sem);
+    munmap(memocom_ptr, memocom_stat.st_size);
+    close(memocom);
+    sem_post(semaforo);
+    sem_close(semaforo);
     free(imageOut);
 
     return EXIT_SUCCESS;
