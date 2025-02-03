@@ -49,19 +49,17 @@ void readBMP(const char* filePath, BMPHeader* header, uint8_t** pixelArray) {
 
 int main() {
     const char* shared_memory_name = "bmp_shared_memory";
-    const int shared_memory_size = sizeof(BMPHeader) + 1920 * 1080 * 4; // Ajusta según el tamaño de la imagen
+    const int shared_memory_size = sizeof(BMPHeader) + 1920 * 1080 * 4; 
 
-    //POSIX
-    // Crear la memoria compartida
     int shm_fd = shm_open(shared_memory_name, O_CREAT | O_RDWR, 0666);
     if (shm_fd == -1) {
         perror("Error al crear la memoria compartida");
         exit(EXIT_FAILURE);
     }
-    // Asignar tamaño a la memoria compartida
+   
     ftruncate(shm_fd, shared_memory_size);
 
-    //mapeamos la memoria compartida para que el proceso pueda acceder a ella 
+    
     void* shared_memory = mmap(0, shared_memory_size, PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shared_memory == MAP_FAILED) {
         perror("Error al mapear la memoria compartida");
@@ -73,7 +71,7 @@ int main() {
     char filePath[256];
 
     while (1) {
-        printf("Ingrese la ruta de la imagen BMP: ");
+        printf("Por Favor, ingrese la ruta de la imagen BMP: ");
         scanf("%s", filePath);
 
         readBMP(filePath, &header, &pixelArray);
@@ -81,7 +79,7 @@ int main() {
         memcpy(shared_memory, &header, sizeof(BMPHeader));
         memcpy((char*)shared_memory + sizeof(BMPHeader), pixelArray, header.size - header.offset);
 
-        printf("Imagen cargada en la memoria compartida.\n");
+        printf("La Imagen cargada correctamente en la memoria compartida.\n");
 
         free(pixelArray);
     }

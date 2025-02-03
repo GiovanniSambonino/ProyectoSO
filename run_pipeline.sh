@@ -4,11 +4,11 @@
 ./ex5 4 &
 pid_ex5=$!
 
-# Ejecutar ./sharpen en segundo plano
+# Ejecutar ./realzador en segundo plano
 ./realzador &
 pid_realzador=$!
 
-# Esperar a que ./ex5 y ./sharpen terminen
+# Esperar a que ./ex5 y ./realzador terminen
 wait $pid_ex5
 wait $pid_realzador
 

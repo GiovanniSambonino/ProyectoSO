@@ -15,8 +15,6 @@
 #define SEM_NAME "/bmp_semaphore"
 
 int main() {
-    sem_t *sem = sem_open(SEM_NAME, 0);
-    sem_wait(sem);
 
     const char* shared_memory_name = "bmp_shared_memory";
     int shm_fd = shm_open(shared_memory_name, O_RDONLY, 0666);
@@ -58,6 +56,7 @@ int main() {
     void* shm_ptr_new = mmap(0, shared_memory_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd_new, 0);
     if (shm_ptr_new == MAP_FAILED) {
         perror("mmap (nueva)");
+        close(shm_fd_new);
         return EXIT_FAILURE;
     }
 
@@ -69,8 +68,6 @@ int main() {
     close(shm_fd);
     munmap(shm_ptr_new, shared_memory_size);
     close(shm_fd_new);
-    sem_post(sem);
-    sem_close(sem);
     free(imageOut);
 
     return EXIT_SUCCESS;
