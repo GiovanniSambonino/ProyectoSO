@@ -6,12 +6,12 @@
 #include <string.h>
 #include <pthread.h>
 #include "bmp.h"
-#include "filter.h"
+#include "filter.h" 
 
 int main(int argc, char **argv) {
     // Verificar si se ha especificado el número de hilos
     if (argc < 2) {
-        printf("Usage: %s <number_of_threads> [output_image]\n", argv[0]);
+        printf("Uso: %s <numero_de_hilos> [imagen_de_salida]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
     // Aplicar el filtro de desenfoque con múltiples hilos
     printf("Aplicando filtro de desenfoque con %d hilos...\n", num_threads);
-    applyBlurMultiThreaded(&image, num_threads);
+    applyDesenfoque(&image, num_threads);
     printf("Filtro de desenfoque aplicado con éxito.\n");
 
     // Guardar la imagen desenfocada de vuelta al archivo si se proporciona un nombre de archivo

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h> 
+#include <pthread.h>
 
 #ifndef _BMP_H_
 #define _BMP_H_
@@ -10,6 +11,8 @@
 #define MEMORY_ERROR 3
 #define VALID_ERROR 4
 #define HEADER_SIZE 54
+extern pthread_mutex_t imageMutex; 
+
 
 // Set data alignment to 1 byte boundary
 #pragma pack(1)  
@@ -62,6 +65,18 @@ typedef struct BMP_Image {
     Pixel ** pixels;
 } BMP_Image;
 
+// Estructura para manejar la información de cada hilo
+typedef struct {
+    BMP_Image *image;    // Puntero a la imagen
+    int startRow;        // Fila inicial para este hilo
+    int endRow;          // Fila final para este hilo
+    int width;           // Ancho de la imagen
+    int blurRadius;      // Radio del desenfoque
+} ThreadData;
+
+
+
+void applyDesenfoque(BMP_Image* image, int numThreads); 
 void printError(int error);
 BMP_Image* createBMPImage(FILE* fptr);
 BMP_Image* createBMPImageCopy(const BMP_Image* template);
@@ -72,8 +87,6 @@ void freeImage(BMP_Image* image);
 int checkBMPValid(BMP_Header* header);
 void printBMPHeader(BMP_Header* header);
 void printBMPImage(BMP_Image* image);
-void* applyBlurThread(void* args);
-void applyBlurMultiThreaded(BMP_Image* image, int num_threads);
 
 
 #pragma pack()

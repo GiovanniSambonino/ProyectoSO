@@ -3,35 +3,26 @@
 #include <pthread.h>
 #include "bmp.h"
 
-// Estructura para pasar argumentos a cada hilo
-typedef struct {
-    BMP_Image* image;
-    int start_row;
-    int end_row;
-    int blur_radius;
-} ThreadArgs;
+pthread_mutex_t imageMutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Función que será ejecutada por cada hilo
-void* applyBlurThread(void* args) {
-    ThreadArgs* threadArgs = (ThreadArgs*)args;
-    BMP_Image* image = threadArgs->image;
-    int start_row = threadArgs->start_row;
-    int end_row = threadArgs->end_row;
-    int blurRadius = threadArgs->blur_radius;
+void *applyDesenfoqueThread(void *arg) {
+    ThreadData *data = (ThreadData *)arg;
+    BMP_Image *image = data->image;
+    int startRow = data->startRow;
+    int endRow = data->endRow;
+    int width = data->width;
+    int blurRadius = data->blurRadius;
 
-    int width = image->header.width_px;
-
-    for (int i = start_row; i < end_row; i++) {
+    for (int i = startRow; i < endRow; i++) {  
         for (int j = 0; j < width; j++) {
             int sumBlue = 0, sumGreen = 0, sumRed = 0;
             int count = 0;
-
-            // Aplicar el desenfoque promediando los píxeles dentro del radio
-            for (int di = -blurRadius; di <= blurRadius; di++) {
-                for (int dj = -blurRadius; dj <= blurRadius; dj++) {
-                    int ni = i + di;
-                    int nj = j + dj;
-                    if (ni >= 0 && ni < end_row && nj >= 0 && nj < width) {
+            // Promediar los píxeles dentro del radio de desenfoque
+            for (int desi = -blurRadius; desi <= blurRadius; desi++) {
+                for (int desj = -blurRadius; desj <= blurRadius; desj++) {
+                    int ni = i + desi;
+                    int nj = j + desj;
+                    if (ni >= 0 && ni < (image->norm_height / 2) && nj >= 0 && nj < width) {  // Limitar a la mitad superior
                         sumBlue += image->pixels[ni][nj].blue;
                         sumGreen += image->pixels[ni][nj].green;
                         sumRed += image->pixels[ni][nj].red;
@@ -40,41 +31,57 @@ void* applyBlurThread(void* args) {
                 }
             }
 
-            // Asignar los valores promediados al píxel actual
+            // Usar el mutex para asegurarse de que solo un hilo acceda a la imagen a la vez
+            pthread_mutex_lock(&imageMutex);
+
+            // Asignar los valores promediados al píxel actual en la imagen original
             image->pixels[i][j].blue = sumBlue / count;
             image->pixels[i][j].green = sumGreen / count;
             image->pixels[i][j].red = sumRed / count;
+
+            pthread_mutex_unlock(&imageMutex);  // Liberar el mutex
         }
     }
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
-// Función para aplicar desenfoque utilizando múltiples hilos
-void applyBlurMultiThreaded(BMP_Image* image, int num_threads) {
-    int height = image->norm_height / 2;  // Limitar a la mitad superior
-    int rows_per_thread = height / num_threads;
-    pthread_t threads[num_threads];
-    ThreadArgs args[num_threads];
 
-    // Crear hilos para aplicar el desenfoque en paralelo
-    for (int i = 0; i < num_threads; i++) {
-        int start_row = i * rows_per_thread;
-        int end_row = (i == num_threads - 1) ? height : (i + 1) * rows_per_thread;  // El último hilo toma el resto
+void applyDesenfoque(BMP_Image *image, int numThreads) {
+    int height = image->norm_height;
+    int width = image->header.width_px;
+    int halfHeight = height / 2;
+    int blurRadius = 1;  // o lo que se desee
+    pthread_t *threads = malloc(numThreads * sizeof(pthread_t));
+    ThreadData *threadData = malloc(numThreads * sizeof(ThreadData));
 
-        args[i].image = image;
-        args[i].start_row = start_row;
-        args[i].end_row = end_row;
-        args[i].blur_radius = 1;  // Puedes ajustar el radio del desenfoque si lo deseas
+    // Calcular la cantidad de filas que cada hilo debe procesar
+    int rowsPerThread = halfHeight / numThreads;
 
-        pthread_create(&threads[i], NULL, applyBlurThread, &args[i]);
+    // Crear hilos y asignarles trabajo
+    for (int i = 0; i < numThreads; i++) {
+        threadData[i].image = image;
+        threadData[i].startRow = i * rowsPerThread;
+        threadData[i].endRow = (i == numThreads - 1) ? halfHeight : (i + 1) * rowsPerThread;
+        threadData[i].width = width;
+        threadData[i].blurRadius = blurRadius;
+
+        if (pthread_create(&threads[i], NULL, applyDesenfoqueThread, (void *)&threadData[i]) != 0) {
+            printError(MEMORY_ERROR);
+            exit(EXIT_FAILURE);
+        }
     }
 
     // Esperar a que todos los hilos terminen
-    for (int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < numThreads; i++) {
         pthread_join(threads[i], NULL);
     }
+
+    // Liberar los recursos de los hilos
+    free(threads);
+    free(threadData);
 }
+
 
 /* USE THIS FUNCTION TO PRINT ERROR MESSAGES
    DO NOT MODIFY THIS FUNCTION
