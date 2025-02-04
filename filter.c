@@ -116,7 +116,8 @@ void applyEdgeDetection(BMP_Image* image, int boxFilter[3][3]) {
 
     printf("Iniciando la detección de bordes en la mitad inferior de la imagen.\n");
 
-    if (image == NULL) {
+    BMP_Image* edgeImage = createBMPImageCopy(image);
+    if (edgeImage == NULL) {
         printf("Error al crear la imagen temporal para detección de bordes.\n");
         return;
     }
@@ -138,19 +139,19 @@ void applyEdgeDetection(BMP_Image* image, int boxFilter[3][3]) {
                 }
             }
 
-            image->pixels[i][j].blue = (sumBlue < 0) ? 0 : (sumBlue > 255) ? 255 : sumBlue;
-            image->pixels[i][j].green = (sumGreen < 0) ? 0 : (sumGreen > 255) ? 255 : sumGreen;
-            image->pixels[i][j].red = (sumRed < 0) ? 0 : (sumRed > 255) ? 255 : sumRed;
+            edgeImage->pixels[i][j].blue = (sumBlue < 0) ? 0 : (sumBlue > 255) ? 255 : sumBlue;
+            edgeImage->pixels[i][j].green = (sumGreen < 0) ? 0 : (sumGreen > 255) ? 255 : sumGreen;
+            edgeImage->pixels[i][j].red = (sumRed < 0) ? 0 : (sumRed > 255) ? 255 : sumRed;
         }
     }
 
     printf("Copiando los resultados del filtro de detección de bordes a la imagen original...\n");
     for (int i = halfHeight; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            image->pixels[i][j] = image->pixels[i][j];
+            image->pixels[i][j] = edgeImage->pixels[i][j];
         }
     }
 
-    freeImage(image);
+    freeImage(edgeImage);
     printf("Filtro de detección de bordes aplicado con éxito.\n");
 }
