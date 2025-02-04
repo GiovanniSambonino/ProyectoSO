@@ -10,6 +10,9 @@
 #include "filter.h"
 #include "filter.c"
 
+#define SHM_NAME_ORIG "bmp_shared_memory"          // Memoria compartida original
+#define SHM_NAME_NEW "processed_bmp_sharped_memory"  // Nueva memoria compartida para la imagen realzada
+#define SEM_NAME "/bmp_semaphore"
 
 int main() {
 
